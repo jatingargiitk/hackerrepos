@@ -71,4 +71,9 @@ describe("assemble", () => {
     const bare = assemble(aggregate(items), null, { comments: 6, stories: 2 }, { from: 0, to: 1 });
     expect(bare.repos.map((r) => r.n).sort()).toEqual(["big/launch", "gone/repo", "old/name"]);
   });
+  it("never lists reference repos like github/dmca", () => {
+    const dmca = ["p", "q", "r"].map((a) => c(a, "see github.com/github/dmca/blob/master/2014/foo.md"));
+    const d = assemble(aggregate(dmca), null, { comments: 3, stories: 0 }, { from: 0, to: 1 });
+    expect(d.repos).toEqual([]);
+  });
 });

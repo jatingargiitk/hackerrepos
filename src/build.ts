@@ -25,6 +25,12 @@ export function isCandidate(mentions: RawMention[], minRecommenders = 2, minStor
   return mentions.some((m) => m.story && m.points >= minStoryPoints);
 }
 
+/**
+ * Repos that HN links as references, not recommendations (GitHub's DMCA
+ * notices and policies). Listing them would crowd out actual projects.
+ */
+export const NOT_PROJECTS = new Set(["github/dmca", "github/site-policy", "github/gov-takedowns"]);
+
 const yyyymm = (iso?: string) => (iso ? iso.slice(0, 7) : undefined);
 
 /**
@@ -51,6 +57,7 @@ export function assemble(
     if (meta && (!info || info.name === null)) continue; // gone or never looked up
     const name = info?.name ?? mostCommonName(mentions);
     const canon = name.toLowerCase();
+    if (NOT_PROJECTS.has(canon)) continue;
     const slot = merged.get(canon);
     if (slot) slot.mentions.push(...mentions);
     else merged.set(canon, { name, key, mentions: [...mentions] });
@@ -79,16 +86,16 @@ export function assemble(
         m.day, authorIdx.get(m.author) ?? 0, Math.round(m.weight * 100), (m.self ? FLAG_SELF : 0) | (m.story ? FLAG_STORY : 0),
       ]),
       x: pickContexts(deduped, opts.contexts ?? 5).map((m) => ({
-        i: m.itemId, a: m.author, t: m.day, k: m.storyId, s: m.storyTitle, q: m.snippet,
+        i: m.itemId, a: m.author, t: m.day, k: m.storyId, s: m.storyTitle, q: clip(m.snippet, 280),
         ...(m.story ? { p: m.points } : {}),
       })),
     };
     if (info) {
-      if (info.description) rec.d = info.description;
+      if (info.description) rec.d = clip(info.description, 200);
       if (info.language) rec.l = info.language;
       if (info.stars !== undefined) rec.s = info.stars;
       if (info.archived) rec.a = 1;
-      if (info.topics?.length) rec.t = info.topics;
+      if (info.topics?.length) rec.t = info.topics.slice(0, 6);
       rec.c = yyyymm(info.createdAt);
       rec.u = yyyymm(info.pushedAt);
     }
@@ -106,6 +113,10 @@ export function assemble(
     authors,
     repos,
   };
+}
+
+function clip(s: string, max: number): string {
+  return s.length <= max ? s : s.slice(0, max - 1).trimEnd() + "…";
 }
 
 function findMeta(meta: MetaCache, canon: string, mentions: RawMention[]) {
