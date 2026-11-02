@@ -11,7 +11,7 @@ import { FLAG_SELF, FLAG_STORY, scoreRepo, type CompactMention, type Dataset, ty
 export interface AssembleOptions {
   from: number;
   to: number;
-  /** Minimum distinct recommenders to be listed (default 2)… */
+  /** Minimum distinct recommenders to be listed (default 3)… */
   minRecommenders?: number;
   /** …or a single HN story about the repo with at least this many points (default 100). */
   minStoryPoints?: number;
@@ -20,7 +20,7 @@ export interface AssembleOptions {
 }
 
 /** Is this repo worth looking up on GitHub / listing at all? */
-export function isCandidate(mentions: RawMention[], minRecommenders = 2, minStoryPoints = 100): boolean {
+export function isCandidate(mentions: RawMention[], minRecommenders = 3, minStoryPoints = 100): boolean {
   if (recommenderCount(mentions) >= minRecommenders) return true;
   return mentions.some((m) => m.story && m.points >= minStoryPoints);
 }
@@ -43,7 +43,7 @@ export function assemble(
   items: { comments: number; stories: number },
   opts: AssembleOptions,
 ): Dataset {
-  const minRec = opts.minRecommenders ?? 2;
+  const minRec = opts.minRecommenders ?? 3;
   const minPts = opts.minStoryPoints ?? 100;
   let mentionCount = 0;
   for (const list of byRepo.values()) mentionCount += list.length;
@@ -174,7 +174,10 @@ export async function build(opts: BuildOptions): Promise<Dataset> {
     if (!token) throw new Error("No GitHub token: set GITHUB_TOKEN, log in with `gh auth login`, or pass --no-github.");
     const cacheFile = join(opts.cacheDir, "github.json");
     meta = await loadCache(cacheFile);
-    const keys = [...byRepo].filter(([, m]) => isCandidate(m, opts.minRecommenders, opts.minStoryPoints)).map(([k]) => k);
+    // One recommender short of the bar: a repo linked under an old and a new
+    // name only adds up after GitHub tells us they are the same repo.
+    const lookup = Math.max(1, (opts.minRecommenders ?? 3) - 1);
+    const keys = [...byRepo].filter(([, m]) => isCandidate(m, lookup, opts.minStoryPoints)).map(([k]) => k);
     log(`Enriching ${keys.length} candidate repos from GitHub…`);
     let batches = 0;
     await enrich(keys, {

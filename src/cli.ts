@@ -105,7 +105,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       `HN ${d(data.from)} → ${d(data.to)} (built ${data.generated.slice(0, 10)})`,
       `${s.comments.toLocaleString("en-US")} comments and ${s.stories.toLocaleString("en-US")} stories linking github.com`,
       `${s.mentions.toLocaleString("en-US")} repo mentions of ${s.repos.toLocaleString("en-US")} distinct repos`,
-      `${s.listed.toLocaleString("en-US")} repos listed (2+ recommenders, or a 100+ point story)`,
+      `${s.listed.toLocaleString("en-US")} repos listed (3+ recommenders, or a 100+ point story)`,
     ];
     out(values.json ? JSON.stringify({ from: data.from, to: data.to, generated: data.generated, ...s }) : lines.join("\n"));
     return 0;
@@ -116,7 +116,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
     if (!want) throw new Error("Usage: hackerrepos show <owner/repo>");
     const repo = data.repos.find((r) => r.n.toLowerCase() === want);
     if (!repo) {
-      out(`${want} is not in the dataset (it needs 2+ distinct HN recommenders).`);
+      out(`${want} is not in the dataset (it needs 3+ distinct HN recommenders, or a 100+ point story).`);
       return 1;
     }
     out(values.json ? JSON.stringify(repo, null, 2) : formatRepo(repo, data, style));

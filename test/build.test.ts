@@ -35,8 +35,9 @@ const meta: MetaCache = {
 
 describe("isCandidate", () => {
   const by = aggregate(items);
-  it("needs two recommenders or a big story", () => {
-    expect(isCandidate(by.get("old/name")!)).toBe(true);
+  it("needs three recommenders (by default) or a big story", () => {
+    expect(isCandidate(by.get("old/name")!)).toBe(false);
+    expect(isCandidate(by.get("old/name")!, 2)).toBe(true);
     expect(isCandidate(by.get("solo/one")!)).toBe(false);
     expect(isCandidate(by.get("big/launch")!)).toBe(true);
     expect(isCandidate(by.get("small/launch")!)).toBe(false);
@@ -46,7 +47,7 @@ describe("isCandidate", () => {
 describe("assemble", () => {
   const data = assemble(aggregate(items), meta, { comments: 6, stories: 2 }, { from: 0, to: 200 * DAY, generated: "g" });
 
-  it("merges renamed repos under GitHub's canonical name and drops deleted ones", () => {
+  it("merges renamed repos under GitHub's canonical name (2 + 1 recommenders = listed) and drops deleted ones", () => {
     expect(data.repos.map((r) => r.n)).toEqual(["Fresh/Name", "big/launch"]);
     expect(data.repos[0]?.m).toHaveLength(3);
   });
@@ -68,7 +69,7 @@ describe("assemble", () => {
     expect(data.generated).toBe("g");
   });
   it("works without GitHub metadata", () => {
-    const bare = assemble(aggregate(items), null, { comments: 6, stories: 2 }, { from: 0, to: 1 });
+    const bare = assemble(aggregate(items), null, { comments: 6, stories: 2 }, { from: 0, to: 1, minRecommenders: 2 });
     expect(bare.repos.map((r) => r.n).sort()).toEqual(["big/launch", "gone/repo", "old/name"]);
   });
   it("never lists reference repos like github/dmca", () => {
