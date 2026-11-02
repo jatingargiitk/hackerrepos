@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { aggregate } from "../src/aggregate.ts";
-import { assemble, isCandidate } from "../src/build.ts";
+import { assemble, isCandidate, splitContexts } from "../src/build.ts";
 import type { MetaCache } from "../src/github.ts";
 import type { HnItem } from "../src/hn.ts";
-import { FLAG_STORY } from "../src/rank.ts";
+import { FLAG_STORY, contextCount, contextShard } from "../src/rank.ts";
 
 const DAY = 86400;
 let nextId = 1;
@@ -61,8 +61,8 @@ describe("assemble", () => {
     expect(w).toBeGreaterThan(200);
   });
   it("keeps context with HN ids", () => {
-    expect(data.repos[0]?.x.map((x) => x.a).sort()).toEqual(["a", "b", "c"]);
-    expect(data.repos[1]?.x[0]).toMatchObject({ a: "s", p: 450 });
+    expect(data.repos[0]?.x?.map((x) => x.a).sort()).toEqual(["a", "b", "c"]);
+    expect(data.repos[1]?.x?.[0]).toMatchObject({ a: "s", p: 450 });
   });
   it("reports stats", () => {
     expect(data.stats).toEqual({ comments: 6, stories: 2, mentions: 8, repos: 6, listed: 2 });
@@ -76,5 +76,32 @@ describe("assemble", () => {
     const dmca = ["p", "q", "r"].map((a) => c(a, "see github.com/github/dmca/blob/master/2014/foo.md"));
     const d = assemble(aggregate(dmca), null, { comments: 3, stories: 0 }, { from: 0, to: 1 });
     expect(d.repos).toEqual([]);
+  });
+});
+
+describe("splitContexts", () => {
+  const data = assemble(aggregate(items), meta, { comments: 6, stories: 2 }, { from: 0, to: 200 * DAY, generated: "g" });
+  const { data: core, files } = splitContexts(data, 16);
+  it("moves contexts into shard files keyed by lower-cased name", () => {
+    expect(core.ctx).toBe(16);
+    expect(core.repos.every((r) => r.x === undefined)).toBe(true);
+    const shard = files.get(contextShard("Fresh/Name", 16));
+    expect(shard?.["fresh/name"]).toEqual(data.repos[0]?.x);
+  });
+  it("keeps the context count for the site's Why? button", () => {
+    expect(core.repos.map(contextCount)).toEqual(data.repos.map(contextCount));
+    expect(contextCount(core.repos[0]!)).toBe(3);
+  });
+  it("leaves the input untouched", () => {
+    expect(data.repos[0]?.x).toHaveLength(3);
+  });
+});
+
+describe("contextShard", () => {
+  it("is case-insensitive, two hex digits and spreads names out", () => {
+    expect(contextShard("Fresh/Name", 256)).toBe(contextShard("fresh/name", 256));
+    expect(contextShard("a/b", 256)).toMatch(/^[0-9a-f]{2}$/);
+    const ids = new Set(Array.from({ length: 2000 }, (_, i) => contextShard(`owner${i}/repo`, 256)));
+    expect(ids.size).toBeGreaterThan(240);
   });
 });

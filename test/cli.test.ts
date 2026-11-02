@@ -1,9 +1,10 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { main } from "../src/cli.ts";
-import type { Dataset } from "../src/rank.ts";
+import { splitContexts } from "../src/build.ts";
+import { contextShard, type Dataset } from "../src/rank.ts";
 
 const day = 20393; // 2025-11-01
 const data: Dataset = {
@@ -22,6 +23,20 @@ let file = "";
 beforeAll(async () => {
   file = join(await mkdtemp(join(tmpdir(), "hr-cli-")), "repos.json");
   await writeFile(file, JSON.stringify(data));
+});
+
+describe("cli with contexts split into shards", () => {
+  it("loads a repo's HN comments from ctx/<shard>.json", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hr-cli-split-"));
+    const { data: core, files } = splitContexts(data, 8);
+    await mkdir(join(dir, "ctx"));
+    for (const [id, f] of files) await writeFile(join(dir, "ctx", `${id}.json`), JSON.stringify(f));
+    await writeFile(join(dir, "repos.json"), JSON.stringify(core));
+    expect(files.has(contextShard("junegunn/fzf", 8))).toBe(true);
+    const lines: string[] = [];
+    expect(await main(["show", "junegunn/fzf", "--data", join(dir, "repos.json")], (s) => lines.push(s))).toBe(0);
+    expect(lines.join("\n")).toContain("I use fzf every day");
+  });
 });
 
 async function run(...args: string[]) {

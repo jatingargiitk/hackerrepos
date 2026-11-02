@@ -9,10 +9,12 @@
  *   npx hackerrepos build                 rebuild the dataset from HN + GitHub
  */
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { build } from "./build.ts";
 import { formatRepo, formatTable, makeStyle } from "./format.ts";
-import { query, type Dataset, type SortKey } from "./rank.ts";
+import { contextShard, query, type ContextShard, type Dataset, type RepoContext, type RepoRecord, type SortKey } from "./rank.ts";
 
 const VERSION = "0.1.0";
 export const DEFAULT_DATA = new URL("../docs/data/repos.json", import.meta.url);
@@ -51,6 +53,19 @@ export async function loadData(path: string | URL = DEFAULT_DATA): Promise<Datas
   const data = JSON.parse(text) as Dataset;
   if (data.version !== 1 || !Array.isArray(data.repos)) throw new Error(`${String(path)} is not a hackerrepos dataset`);
   return data;
+}
+
+/** A repo's HN contexts: inline, or from the ctx/<shard>.json next to the dataset. */
+export async function loadContexts(path: string | URL, data: Dataset, repo: RepoRecord): Promise<RepoContext[]> {
+  if (repo.x || !data.ctx || !repo.w) return repo.x ?? [];
+  const base = path instanceof URL ? path : /^https?:\/\//.test(path) ? new URL(path) : pathToFileURL(resolve(path));
+  const file = new URL(`ctx/${contextShard(repo.n, data.ctx)}.json`, base);
+  try {
+    const text = file.protocol === "file:" ? await readFile(file, "utf8") : await (await fetch(file)).text();
+    return (JSON.parse(text) as ContextShard)[repo.n.toLowerCase()] ?? [];
+  } catch {
+    return [];
+  }
 }
 
 const SORTS: SortKey[] = ["score", "trending", "recommenders", "stars", "recent"];
@@ -119,7 +134,8 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`${want} is not in the dataset (it needs 3+ distinct HN recommenders, or a 100+ point story).`);
       return 1;
     }
-    out(values.json ? JSON.stringify(repo, null, 2) : formatRepo(repo, data, style));
+    const full = { ...repo, x: await loadContexts(values.data ?? DEFAULT_DATA, data, repo) };
+    out(values.json ? JSON.stringify(full, null, 2) : formatRepo(full, data, style));
     return 0;
   }
 

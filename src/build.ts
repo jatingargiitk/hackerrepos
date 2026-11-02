@@ -1,12 +1,14 @@
 /**
  * The data pipeline: crawl → aggregate → enrich → compact dataset.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { aggregate, pickContexts, recommenderCount, type RawMention } from "./aggregate.ts";
 import { enrich, loadCache, resolveToken, saveCache, type MetaCache } from "./github.ts";
 import { crawl, type HnItem } from "./hn.ts";
-import { FLAG_SELF, FLAG_STORY, scoreRepo, type CompactMention, type Dataset, type RepoRecord } from "./rank.ts";
+import {
+  FLAG_SELF, FLAG_STORY, contextShard, scoreRepo, type CompactMention, type ContextShard, type Dataset, type RepoRecord,
+} from "./rank.ts";
 
 export interface AssembleOptions {
   from: number;
@@ -143,6 +145,23 @@ function dedupeByItem(mentions: RawMention[]): RawMention[] {
   return [...byItem.values()];
 }
 
+/**
+ * Move contexts out of the main dataset into `shards` files so the site only
+ * downloads the quotes for the repos someone actually expands.
+ */
+export function splitContexts(data: Dataset, shards = 256): { data: Dataset; files: Map<string, ContextShard> } {
+  const files = new Map<string, ContextShard>();
+  const repos = data.repos.map(({ x, ...rest }) => {
+    if (!x?.length) return rest;
+    const id = contextShard(rest.n, shards);
+    const file = files.get(id) ?? {};
+    file[rest.n.toLowerCase()] = x;
+    files.set(id, file);
+    return { ...rest, w: x.length };
+  });
+  return { data: { ...data, repos, ctx: shards }, files };
+}
+
 export interface BuildOptions extends AssembleOptions {
   cacheDir: string;
   out: string;
@@ -196,8 +215,12 @@ export async function build(opts: BuildOptions): Promise<Dataset> {
   }
 
   const data = assemble(byRepo, meta, { comments, stories: items.length - comments }, opts);
-  await mkdir(dirname(opts.out), { recursive: true });
-  await writeFile(opts.out, JSON.stringify(data));
-  log(`Wrote ${data.repos.length} repos to ${opts.out}`);
-  return data;
+  const split = splitContexts(data);
+  const ctxDir = join(dirname(opts.out), "ctx");
+  await rm(ctxDir, { recursive: true, force: true });
+  await mkdir(ctxDir, { recursive: true });
+  for (const [id, file] of split.files) await writeFile(join(ctxDir, `${id}.json`), JSON.stringify(file));
+  await writeFile(opts.out, JSON.stringify(split.data));
+  log(`Wrote ${data.repos.length} repos to ${opts.out} and their HN context to ${ctxDir}/`);
+  return split.data;
 }

@@ -39,7 +39,10 @@ export interface RepoRecord {
   c?: string;
   u?: string;
   m: CompactMention[];
-  x: RepoContext[];
+  /** HN comments shown as context. Inline in small datasets; otherwise in ctx/<shard>.json. */
+  x?: RepoContext[];
+  /** How many contexts the shard file holds for this repo (when x is split out). */
+  w?: number;
 }
 
 export interface Dataset {
@@ -51,6 +54,24 @@ export interface Dataset {
   stats: { comments: number; stories: number; mentions: number; repos: number; listed: number };
   authors: string[];
   repos: RepoRecord[];
+  /** Contexts are split into this many ctx/<shard>.json files next to the dataset. */
+  ctx?: number;
+}
+
+/** Contexts for one shard file: lower-cased owner/name → contexts. */
+export type ContextShard = Record<string, RepoContext[]>;
+
+/** Which ctx/<shard>.json holds a repo's contexts (FNV-1a of the lower-cased name). */
+export function contextShard(name: string, shards: number): string {
+  let h = 0x811c9dc5;
+  const s = name.toLowerCase();
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  return (h % shards).toString(16).padStart(2, "0");
+}
+
+/** How many contexts a repo has, whether inline or split out. */
+export function contextCount(r: RepoRecord): number {
+  return r.x?.length ?? r.w ?? 0;
 }
 
 export interface Score {
