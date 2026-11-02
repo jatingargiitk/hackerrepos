@@ -1,5 +1,5 @@
 /** Terminal rendering for the CLI. */
-import type { Dataset, Ranked, RepoRecord } from "./rank.ts";
+import { scoreRepo, type Dataset, type Ranked, type RepoRecord } from "./rank.ts";
 
 export interface Style {
   bold: (s: string) => string;
@@ -48,7 +48,7 @@ export function formatTable(rows: Ranked[], style: Style, width = 100): string {
 }
 
 export function formatRepo(repo: RepoRecord, data: Dataset, style: Style): string {
-  const recs = new Set(repo.m.map((m) => m[1])).size;
+  const recs = scoreRepo(repo.m).recommenders;
   const out: string[] = [];
   out.push(`${style.bold(repo.n)}  ${style.dim(`https://github.com/${repo.n}`)}`);
   if (repo.d) out.push(repo.d);
@@ -61,7 +61,7 @@ export function formatRepo(repo: RepoRecord, data: Dataset, style: Style): strin
   ].filter(Boolean);
   out.push(style.dim(facts.join(" · ")));
   out.push("");
-  for (const c of repo.x) {
+  for (const c of repo.x ?? []) {
     const head = c.p !== undefined ? `${c.a} submitted it (${c.p} points)` : `${c.a} on "${truncate(c.s, 60)}"`;
     out.push(`${style.orange("▍")} ${style.bold(head)} ${style.dim(dayToDate(c.t))}`);
     if (c.p === undefined) out.push(`${style.orange("▍")} ${c.q}`);
