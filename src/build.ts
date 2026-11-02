@@ -78,10 +78,13 @@ export function assemble(
   // 3. Compact records.
   const repos: RepoRecord[] = [];
   for (const [canon, { name, mentions }] of merged) {
-    const deduped = dedupeByItem(mentions);
+    const info = meta ? findMeta(meta, canon, mentions) : undefined;
+    // A mention older than the repo itself was about an earlier repo with that
+    // name (e.g. antirez/redis moved to redis/redis and was later re-created).
+    const born = info?.createdAt ? Math.floor(Date.parse(info.createdAt) / 86400_000) - 1 : -Infinity;
+    const deduped = dedupeByItem(mentions).filter((m) => m.day >= born);
     if (!isCandidate(deduped, minRec, minPts)) continue;
     deduped.sort((a, b) => a.day - b.day || a.itemId - b.itemId);
-    const info = meta ? findMeta(meta, canon, deduped) : undefined;
     const rec: RepoRecord = {
       n: name,
       m: deduped.map((m): CompactMention => [

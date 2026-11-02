@@ -27,7 +27,7 @@ const items = [
 
 const fetched = "2026-11-01T00:00:00Z";
 const meta: MetaCache = {
-  "old/name": { name: "Fresh/Name", stars: 5, language: "Go", description: "d", fetched, createdAt: "2019-04-01T00:00:00Z", pushedAt: "2026-10-01T00:00:00Z" },
+  "old/name": { name: "Fresh/Name", stars: 5, language: "Go", description: "d", fetched, createdAt: "1970-03-01T00:00:00Z", pushedAt: "2026-10-01T00:00:00Z" },
   "fresh/name": { name: "Fresh/Name", stars: 5, language: "Go", description: "d", fetched },
   "gone/repo": { name: null, fetched },
   "big/launch": { name: "big/launch", stars: 9000, fetched, archived: true, topics: ["x"] },
@@ -52,7 +52,7 @@ describe("assemble", () => {
     expect(data.repos[0]?.m).toHaveLength(3);
   });
   it("carries GitHub metadata in compact form", () => {
-    expect(data.repos[0]).toMatchObject({ d: "d", l: "Go", s: 5, c: "2019-04", u: "2026-10" });
+    expect(data.repos[0]).toMatchObject({ d: "d", l: "Go", s: 5, c: "1970-03", u: "2026-10" });
     expect(data.repos[1]).toMatchObject({ a: 1, t: ["x"] });
   });
   it("encodes mentions as [day, author index, weight×100, flags]", () => {
@@ -71,6 +71,14 @@ describe("assemble", () => {
   it("works without GitHub metadata", () => {
     const bare = assemble(aggregate(items), null, { comments: 6, stories: 2 }, { from: 0, to: 1, minRecommenders: 2 });
     expect(bare.repos.map((r) => r.n).sort()).toEqual(["big/launch", "gone/repo", "old/name"]);
+  });
+  it("ignores mentions from before the repo was created (an earlier repo with that name)", () => {
+    const old = ["p", "q", "r"].map((a) => c(a, "github.com/someone/reborn", 100));
+    const fresh = c("s", "github.com/someone/reborn", 400);
+    const m: MetaCache = { "someone/reborn": { name: "someone/reborn", stars: 3, fetched, createdAt: new Date(300 * DAY * 1000).toISOString() } };
+    expect(assemble(aggregate([...old, fresh]), m, { comments: 4, stories: 0 }, { from: 0, to: 500 * DAY }).repos).toEqual([]);
+    const ok: MetaCache = { "someone/reborn": { ...m["someone/reborn"]!, createdAt: new Date(50 * DAY * 1000).toISOString() } };
+    expect(assemble(aggregate([...old, fresh]), ok, { comments: 4, stories: 0 }, { from: 0, to: 500 * DAY }).repos[0]?.m).toHaveLength(4);
   });
   it("never lists reference repos like github/dmca", () => {
     const dmca = ["p", "q", "r"].map((a) => c(a, "see github.com/github/dmca/blob/master/2014/foo.md"));
