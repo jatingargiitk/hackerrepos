@@ -57,7 +57,7 @@ export function htmlToText(html: string): string {
 const OWNER = "[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}";
 const NAME = "[A-Za-z0-9._-]{1,100}";
 const GH_URL = new RegExp(
-  `(?:https?://)?(?:www\\.)?github\\.com/(${OWNER})/(${NAME})((?:[/?#][^\\s"'<>()\\[\\]{}]*)?)`,
+  `(?:https?://)?(?<![\\w.-])(?:www\\.)?github\\.com/(${OWNER})/(${NAME})((?:[/?#][^\\s"'<>()\\[\\]{}]*)?)`,
   "gi",
 );
 
