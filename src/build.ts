@@ -42,10 +42,11 @@ export function assemble(
   let mentionCount = 0;
   for (const list of byRepo.values()) mentionCount += list.length;
 
-  // 1. Canonicalise and merge.
+  // 1. Canonicalise and merge. Candidacy is decided *after* merging, so an old
+  // and a new name that each have one recommender still add up.
   const merged = new Map<string, { name: string; key: string; mentions: RawMention[] }>();
   for (const [key, mentions] of byRepo) {
-    if (!isCandidate(mentions, minRec, minPts)) continue;
+    if (!meta && !isCandidate(mentions, minRec, minPts)) continue;
     const info = meta?.[key];
     if (meta && (!info || info.name === null)) continue; // gone or never looked up
     const name = info?.name ?? mostCommonName(mentions);
@@ -53,6 +54,10 @@ export function assemble(
     const slot = merged.get(canon);
     if (slot) slot.mentions.push(...mentions);
     else merged.set(canon, { name, key, mentions: [...mentions] });
+  }
+
+  for (const [canon, slot] of merged) {
+    if (!isCandidate(dedupeByItem(slot.mentions), minRec, minPts)) merged.delete(canon);
   }
 
   // 2. Author index (most frequent first keeps indexes short).
@@ -92,7 +97,6 @@ export function assemble(
   const scores = new Map(repos.map((r) => [r, scoreRepo(r.m).score]));
   repos.sort((a, b) => (scores.get(b) ?? 0) - (scores.get(a) ?? 0) || a.n.localeCompare(b.n));
 
-  // Drop authors no longer referenced? They all are (only merged repos counted).
   return {
     version: 1,
     generated: opts.generated ?? new Date().toISOString(),
