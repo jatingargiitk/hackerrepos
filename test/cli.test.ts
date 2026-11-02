@@ -37,6 +37,13 @@ describe("cli with contexts split into shards", () => {
     expect(await main(["show", "junegunn/fzf", "--data", join(dir, "repos.json")], (s) => lines.push(s))).toBe(0);
     expect(lines.join("\n")).toContain("I use fzf every day");
   });
+  it("still shows a repo when its shard is missing, with an HN search link", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hr-cli-noctx-"));
+    await writeFile(join(dir, "repos.json"), JSON.stringify(splitContexts(data, 8).data));
+    const lines: string[] = [];
+    expect(await main(["show", "junegunn/fzf", "--data", join(dir, "repos.json")], (s) => lines.push(s))).toBe(0);
+    expect(lines.join("\n")).toContain("https://hn.algolia.com/?type=comment&query=github.com%2Fjunegunn%2Ffzf");
+  });
 });
 
 async function run(...args: string[]) {

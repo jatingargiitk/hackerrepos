@@ -68,6 +68,7 @@ export function formatRepo(repo: RepoRecord, data: Dataset, style: Style): strin
     out.push(`${style.orange("▍")} ${style.dim(hnItemUrl(c.i))}`);
     out.push("");
   }
+  if (!repo.x?.length) out.push(style.dim(`Search HN for it: https://hn.algolia.com/?type=comment&query=${encodeURIComponent(`github.com/${repo.n}`)}`));
   void data;
   return out.join("\n").trimEnd();
 }

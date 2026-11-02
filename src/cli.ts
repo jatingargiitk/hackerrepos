@@ -18,6 +18,8 @@ import { contextShard, query, type ContextShard, type Dataset, type RepoContext,
 
 const VERSION = "0.1.0";
 export const DEFAULT_DATA = new URL("../docs/data/repos.json", import.meta.url);
+/** The npm package ships only repos.json; `show` fetches quotes from the site. */
+export const REMOTE_DATA = "https://jatingargiitk.github.io/hackerrepos/data/repos.json";
 
 const HELP = `hackerrepos ${VERSION}: the GitHub repos Hacker News keeps recommending
 
@@ -56,16 +58,27 @@ export async function loadData(path: string | URL = DEFAULT_DATA): Promise<Datas
 }
 
 /** A repo's HN contexts: inline, or from the ctx/<shard>.json next to the dataset. */
-export async function loadContexts(path: string | URL, data: Dataset, repo: RepoRecord): Promise<RepoContext[]> {
+export async function loadContexts(
+  path: string | URL, data: Dataset, repo: RepoRecord, fallback?: string,
+): Promise<RepoContext[]> {
   if (repo.x || !data.ctx || !repo.w) return repo.x ?? [];
+  const shard = `ctx/${contextShard(repo.n, data.ctx)}.json`;
   const base = path instanceof URL ? path : /^https?:\/\//.test(path) ? new URL(path) : pathToFileURL(resolve(path));
-  const file = new URL(`ctx/${contextShard(repo.n, data.ctx)}.json`, base);
-  try {
-    const text = file.protocol === "file:" ? await readFile(file, "utf8") : await (await fetch(file)).text();
-    return (JSON.parse(text) as ContextShard)[repo.n.toLowerCase()] ?? [];
-  } catch {
-    return [];
+  for (const file of [new URL(shard, base), ...(fallback ? [new URL(shard, fallback)] : [])]) {
+    try {
+      let text: string;
+      if (file.protocol === "file:") text = await readFile(file, "utf8");
+      else {
+        const res = await fetch(file, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) continue;
+        text = await res.text();
+      }
+      return (JSON.parse(text) as ContextShard)[repo.n.toLowerCase()] ?? [];
+    } catch {
+      // try the next source
+    }
   }
+  return [];
 }
 
 const SORTS: SortKey[] = ["score", "trending", "recommenders", "stars", "recent"];
@@ -134,7 +147,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
       out(`${want} is not in the dataset (it needs 3+ distinct HN recommenders, or a 100+ point story).`);
       return 1;
     }
-    const full = { ...repo, x: await loadContexts(values.data ?? DEFAULT_DATA, data, repo) };
+    const full = { ...repo, x: await loadContexts(values.data ?? DEFAULT_DATA, data, repo, values.data ? undefined : REMOTE_DATA) };
     out(values.json ? JSON.stringify(full, null, 2) : formatRepo(full, data, style));
     return 0;
   }
