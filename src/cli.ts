@@ -40,7 +40,7 @@ Options for top
       --data <path>    dataset to read (default: bundled docs/data/repos.json)
 
 Options for build
-      --from <date>    start of the crawl (default 2008-01-01)
+      --from <date>    start of the crawl (default 2007-02-01)
       --to <date>      end of the crawl (default: now)
       --out <path>     where to write (default docs/data/repos.json)
       --cache <dir>    HN + GitHub cache directory (default .cache)
@@ -112,7 +112,7 @@ export async function main(argv: string[], out: (s: string) => void = console.lo
 
   if (cmd === "build") {
     const to = values.to ? Date.parse(values.to) / 1000 : Math.floor(Date.now() / 1000);
-    const from = Date.parse(values.from ?? "2008-01-01") / 1000;
+    const from = Date.parse(values.from ?? "2007-02-01") / 1000;
     if (!Number.isFinite(from) || !Number.isFinite(to) || from >= to) throw new Error("Bad --from/--to dates");
     await build({
       from: Math.floor(from), to: Math.floor(to),
