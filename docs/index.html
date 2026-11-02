@@ -245,7 +245,7 @@ function compute() {
 }
 
 function spark(r) {
-  var first = year(DATA.from), lastY = year(DATA.to), n = lastY - first + 1, counts = new Array(n).fill(0);
+  var first = year(Math.floor(DATA.from / 86400)), lastY = year(Math.floor(DATA.to / 86400)), n = lastY - first + 1, counts = new Array(n).fill(0);
   var seen = {};
   r.m.forEach(function (m) { var k = year(m[0]) + ":" + m[1]; if (!seen[k]) { seen[k] = 1; counts[year(m[0]) - first]++; } });
   var max = Math.max.apply(null, counts) || 1, w = 4, gap = 1, h = 20;
