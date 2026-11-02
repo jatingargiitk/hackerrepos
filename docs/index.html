@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hackerrepos: the GitHub repos Hacker News keeps recommending</title>
+<meta name="description" content="Every GitHub repo Hacker News commenters recommended, 2008 to today, ranked by how many different people recommended it. HackerTube, but for repos.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23ff6600'/%3E%3Ctext x='16' y='23' font-family='Verdana' font-size='19' font-weight='700' fill='white' text-anchor='middle'%3EY%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f6ef; --panel: #fffffa; --ink: #1d1d1b; --muted: #6b6b63; --line: #e3e1d6;
+    --accent: #ff6600; --accent-ink: #b84a00; --chip: #ecebe1; --link: #1d4ed8; --gem: #0f8a5f;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121210; --panel: #1b1b18; --ink: #ecebe4; --muted: #9a998f; --line: #2c2b27;
+      --accent: #ff7a1f; --accent-ink: #ff9a52; --chip: #262521; --link: #8ab4ff; --gem: #37c78f;
+      --shadow: 0 1px 2px rgba(0,0,0,.3); }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 18px; }
+  header.top { background: var(--accent); color: #fff; }
+  header.top .wrap { display: flex; align-items: center; gap: 12px; padding-top: 10px; padding-bottom: 10px; }
+  .logo { display: inline-grid; place-items: center; width: 26px; height: 26px; border: 2px solid #fff; font-weight: 800; font-size: 15px; font-family: Verdana, sans-serif; }
+  .brand { font-weight: 800; font-size: 18px; letter-spacing: -.01em; text-decoration: none; }
+  .brand small { font-weight: 500; opacity: .9; font-size: 14px; margin-left: 6px; }
+  header.top nav { margin-left: auto; display: flex; gap: 14px; font-size: 14px; }
+  header.top nav a { color: #fff; text-decoration: none; opacity: .92; }
+  header.top nav a:hover { opacity: 1; text-decoration: underline; }
+  .hero { padding: 26px 0 8px; }
+  .hero h1 { font-size: clamp(24px, 4vw, 34px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -.02em; }
+  .hero h1 em { font-style: normal; color: var(--accent-ink); }
+  .hero p { margin: 0; color: var(--muted); max-width: 720px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 14px 0 4px; font-size: 13px; color: var(--muted); }
+  .stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .controls { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0 10px; border-bottom: 1px solid var(--line); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .row + .row { margin-top: 8px; }
+  .search { flex: 1 1 260px; position: relative; }
+  .search input { width: 100%; padding: 9px 12px 9px 34px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+    color: var(--ink); font: inherit; outline: none; box-shadow: var(--shadow); }
+  .search input:focus { border-color: var(--accent); }
+  .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); opacity: .5; }
+  .search kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
+  kbd { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; color: var(--muted); background: var(--panel); }
+  select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); font: inherit; font-size: 14px; }
+  .chips { display: inline-flex; background: var(--chip); border-radius: 10px; padding: 3px; gap: 2px; }
+  .chips button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+  .chips button[aria-pressed="true"] { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; padding: 5px 8px; border-radius: 8px; }
+  .toggle input { accent-color: var(--accent); }
+  .toggle.gem { color: var(--gem); font-weight: 600; }
+  .count { margin-left: auto; font-size: 13px; color: var(--muted); }
+  ol.list { list-style: none; margin: 0; padding: 6px 0 30px; counter-reset: none; }
+  li.repo { display: grid; grid-template-columns: 44px 1fr auto; gap: 4px 12px; padding: 14px 10px; border-bottom: 1px solid var(--line); border-radius: 10px; }
+  li.repo:hover, li.repo.sel { background: var(--panel); }
+  li.repo.sel { box-shadow: inset 3px 0 0 var(--accent); }
+  .rank { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; padding-top: 1px; font-size: 14px; }
+  .main { min-width: 0; }
+  .name { font-weight: 650; font-size: 16px; text-decoration: none; word-break: break-word; }
+  .name .owner { font-weight: 450; color: var(--muted); }
+  .name:hover { color: var(--accent-ink); }
+  .desc { margin: 2px 0 6px; color: var(--ink); opacity: .86; font-size: 14px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); align-items: center; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: 0; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 1px 7px; border-radius: 99px; background: var(--chip); color: var(--muted); }
+  .badge.gem { background: color-mix(in srgb, var(--gem) 14%, transparent); color: var(--gem); font-weight: 600; }
+  .badge.arch { background: color-mix(in srgb, #a16207 15%, transparent); color: #a16207; }
+  .side { text-align: right; min-width: 92px; }
+  .recs { font-weight: 750; font-size: 20px; color: var(--accent-ink); font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .recs small { display: block; font-weight: 500; font-size: 11px; color: var(--muted); letter-spacing: .02em; }
+  .spark { display: block; margin: 6px 0 0 auto; }
+  .more { background: none; border: 0; color: var(--link); font: inherit; font-size: 12.5px; cursor: pointer; padding: 0; }
+  .ctx { grid-column: 2 / 4; margin-top: 8px; display: grid; gap: 8px; }
+  .quote { border-left: 3px solid var(--accent); background: var(--panel); padding: 8px 12px; border-radius: 0 8px 8px 0; font-size: 13.5px; }
+  .quote .who { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+  .quote .who a { color: var(--link); text-decoration: none; }
+  .quote .who a:hover { text-decoration: underline; }
+  .quote p { margin: 0; overflow-wrap: anywhere; }
+  .empty, .loading { text-align: center; color: var(--muted); padding: 60px 0; }
+  .loadmore { display: block; margin: 0 auto 30px; padding: 9px 18px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 10px; font: inherit; cursor: pointer; }
+  footer { border-top: 1px solid var(--line); padding: 22px 0 40px; color: var(--muted); font-size: 13px; }
+  footer p { margin: 0 0 8px; max-width: 760px; }
+  footer a { color: var(--link); }
+  .help { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  @media (max-width: 640px) {
+    li.repo { grid-template-columns: 30px 1fr; }
+    .side { grid-column: 2; text-align: left; display: flex; gap: 10px; align-items: baseline; }
+    .recs small { display: inline; margin-left: 4px; }
+    .spark { display: none; }
+    .ctx { grid-column: 1 / 3; }
+    header.top nav a.hide-sm { display: none; }
+    .count { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <span class="logo" aria-hidden="true">Y</span>
+    <a class="brand" href="./">hackerrepos<small>repos recommended on HN</small></a>
+    <nav>
+      <a href="#how" class="hide-sm">How it works</a>
+      <a href="data/repos.json" download>Data</a>
+      <a href="https://github.com/jatingargiitk/hackerrepos">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>The GitHub repos <em>Hacker News</em> keeps recommending</h1>
+    <p>Every <code>github.com</code> link in HN comments and stories since 2008, ranked by how many <em>different</em> people recommended it. No votes to game, no stars-for-stars: just commenters saying "check this out".</p>
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="controls" aria-label="Filters">
+    <div class="row">
+      <label class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search repos, descriptions, topics…" autocomplete="off" aria-label="Search">
+        <kbd>/</kbd>
+      </label>
+      <select id="lang" aria-label="Language"><option value="">All languages</option></select>
+      <select id="sort" aria-label="Sort">
+        <option value="score">Top</option>
+        <option value="trending">Trending</option>
+        <option value="recommenders">Most recommenders</option>
+        <option value="stars">Most stars</option>
+        <option value="recent">Recently mentioned</option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="chips" id="win" role="group" aria-label="Time window">
+        <button data-w="30d">30 days</button><button data-w="90d">90 days</button><button data-w="1y">1 year</button>
+        <button data-w="2y">2 years</button><button data-w="5y">5 years</button><button data-w="all">All time</button>
+      </div>
+      <label class="toggle gem" title="Under 1,000 stars and recommended by 3+ people"><input type="checkbox" id="gems"> 💎 Hidden gems</label>
+      <label class="toggle"><input type="checkbox" id="arch"> Include archived</label>
+      <span class="count" id="count"></span>
+    </div>
+  </section>
+
+  <ol class="list" id="list"><li class="loading">Loading repos…</li></ol>
+  <button class="loadmore" id="loadmore" hidden>Show more</button>
+
+  <footer id="how">
+    <p><b>How it works.</b> A crawler pulls every Hacker News comment and story that links to <code>github.com</code> from the <a href="https://hn.algolia.com/api">HN Algolia API</a>, extracts and normalises the repo links, and looks each repo up on GitHub (following renames, dropping deleted repos). Each person counts once per repo, at the weight of their strongest mention: a link to the repo itself counts 1, a file 0.75, an issue, PR or commit 0.25 (those are usually bug reports, not recommendations). Recommendation language ("check out", "I use", "highly recommend") adds 25%, and self-promotion counts half and never as a recommender. A story that links the repo counts once for the submitter, plus a bonus for its points. <b>Trending</b> halves a mention's weight every 90 days. A repo is listed once two different people have recommended it, or it had a 100+ point story.</p>
+    <p><b>Credits.</b> Inspired by Andrej Karpathy's <a href="https://karpathy.bearblog.dev/hacker-tube/">HackerTube</a> (YouTube built from videos recommended on HN). Data from the HN Algolia API and the GitHub API. Code under the MIT license: <a href="https://github.com/jatingargiitk/hackerrepos">jatingargiitk/hackerrepos</a>. Want it in your terminal? <code>npx hackerrepos</code>.</p>
+    <div class="help"><span><kbd>/</kbd> search</span><span><kbd>j</kbd> <kbd>k</kbd> move</span><span><kbd>Enter</kbd> show HN comments</span><span><kbd>o</kbd> open repo</span><span><kbd>g</kbd> hidden gems</span></div>
+  </footer>
+</main>
+
+<script>
+"use strict";
+// ---- ranking (a port of src/rank.ts; test/site.test.ts keeps them in sync) ----
+// BEGIN scoreRepo
+function scoreRepo(mentions, opts) {
+  opts = opts || {};
+  var best = new Map();
+  var selfAuthors = new Set();
+  var count = 0, last = 0;
+  var since = opts.sinceDay === undefined ? -Infinity : opts.sinceDay;
+  var now = opts.nowDay || 0;
+  for (var i = 0; i < mentions.length; i++) {
+    var m = mentions[i], day = m[0], author = m[1], flags = m[3];
+    if (day < since) continue;
+    count++;
+    if (day > last) last = day;
+    var w = m[2] / 100;
+    if (opts.halfLifeDays) w *= Math.pow(0.5, Math.max(0, now - day) / opts.halfLifeDays);
+    if (flags & 1) selfAuthors.add(author);
+    if (w > (best.get(author) || 0)) best.set(author, w);
+  }
+  var score = 0, recommenders = 0;
+  best.forEach(function (w, author) { score += w; if (!selfAuthors.has(author)) recommenders++; });
+  return { score: Math.round(score * 100) / 100, recommenders: recommenders, mentions: count, last: last };
+}
+// END scoreRepo
+
+var WINDOWS = { "30d": 30, "90d": 90, "1y": 365, "2y": 730, "5y": 1825, all: Infinity };
+var LANG_COLORS = { JavaScript: "#f1e05a", TypeScript: "#3178c6", Python: "#3572A5", Go: "#00ADD8", Rust: "#dea584", C: "#555555",
+  "C++": "#f34b7d", Java: "#b07219", Ruby: "#701516", Shell: "#89e051", Swift: "#F05138", Kotlin: "#A97BFF", Haskell: "#5e5086",
+  "C#": "#178600", PHP: "#4F5D95", Clojure: "#db5855", Elixir: "#6e4a7e", Zig: "#ec915c", Lua: "#000080", OCaml: "#ef7a08",
+  Scala: "#c22d40", "Emacs Lisp": "#c065db", "Vim Script": "#199f4b", Nix: "#7e7eff", HTML: "#e34c26", CSS: "#563d7c",
+  "Jupyter Notebook": "#DA5B0B", Dart: "#00B4AB", Julia: "#a270ba", "Common Lisp": "#3fb68b", Erlang: "#B83998", Nim: "#ffc200", R: "#198CE7",
+  "Objective-C": "#438eff", Racket: "#3c5caa", Perl: "#0298c3", Assembly: "#6E4C13", Scheme: "#1e4aec", Elm: "#60B5CC", "F#": "#b845fc", Crystal: "#000100", V: "#4f87c4", Svelte: "#ff3e00", Vue: "#41b883", MDX: "#fcb32c", Markdown: "#083fa1" };
+
+var DATA = null, view = [], shown = 0, sel = -1, PAGE = 50;
+var state = { q: "", lang: "", sort: "score", w: "all", gems: false, arch: false };
+var $ = function (id) { return document.getElementById(id); };
+var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+var fmt = function (n) { return n >= 1e6 ? (n / 1e6).toFixed(1) + "m" : n >= 1e4 ? Math.round(n / 1e3) + "k" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n); };
+var ymd = function (day) { return new Date(day * 864e5).toISOString().slice(0, 10); };
+var year = function (day) { return new Date(day * 864e5).getUTCFullYear(); };
+
+function readHash() {
+  var p = new URLSearchParams(location.hash.slice(1));
+  state.q = p.get("q") || ""; state.lang = p.get("lang") || ""; state.sort = p.get("sort") || "score";
+  state.w = WINDOWS[p.get("w")] !== undefined ? p.get("w") : "all"; state.gems = p.get("gems") === "1"; state.arch = p.get("arch") === "1";
+}
+function writeHash() {
+  var p = new URLSearchParams();
+  if (state.q) p.set("q", state.q); if (state.lang) p.set("lang", state.lang); if (state.sort !== "score") p.set("sort", state.sort);
+  if (state.w !== "all") p.set("w", state.w); if (state.gems) p.set("gems", "1"); if (state.arch) p.set("arch", "1");
+  var h = p.toString();
+  history.replaceState(null, "", h ? "#" + h : location.pathname + location.search);
+}
+function syncControls() {
+  $("q").value = state.q; $("lang").value = state.lang; $("sort").value = state.sort; $("gems").checked = state.gems; $("arch").checked = state.arch;
+  Array.prototype.forEach.call($("win").children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.w === state.w)); });
+}
+
+function compute() {
+  var nowDay = Math.floor(DATA.to / 86400);
+  var days = WINDOWS[state.w];
+  var since = isFinite(days) ? nowDay - days : undefined;
+  var needle = state.q.trim().toLowerCase();
+  var half = state.sort === "trending" ? 90 : 0;
+  var out = [];
+  for (var i = 0; i < DATA.repos.length; i++) {
+    var r = DATA.repos[i];
+    if (state.lang && (r.l || "") !== state.lang) continue;
+    if (!state.arch && r.a) continue;
+    if (needle && (r.n + " " + (r.d || "") + " " + (r.t || []).join(" ")).toLowerCase().indexOf(needle) < 0) continue;
+    var s = scoreRepo(r.m, { sinceDay: since, nowDay: nowDay, halfLifeDays: half });
+    if (!s.mentions) continue;
+    if (state.gems && ((r.s || 0) >= 1000 || s.recommenders < 3)) continue;
+    out.push({ r: r, s: s });
+  }
+  var cmp = {
+    score: function (a, b) { return b.s.score - a.s.score; },
+    trending: function (a, b) { return b.s.score - a.s.score; },
+    recommenders: function (a, b) { return b.s.recommenders - a.s.recommenders || b.s.score - a.s.score; },
+    stars: function (a, b) { return (b.r.s || 0) - (a.r.s || 0); },
+    recent: function (a, b) { return b.s.last - a.s.last || b.s.score - a.s.score; }
+  }[state.sort] || function (a, b) { return b.s.score - a.s.score; };
+  out.sort(function (a, b) { return cmp(a, b) || (a.r.n < b.r.n ? -1 : 1); });
+  return out;
+}
+
+function spark(r) {
+  var first = year(DATA.from), lastY = year(DATA.to), n = lastY - first + 1, counts = new Array(n).fill(0);
+  var seen = {};
+  r.m.forEach(function (m) { var k = year(m[0]) + ":" + m[1]; if (!seen[k]) { seen[k] = 1; counts[year(m[0]) - first]++; } });
+  var max = Math.max.apply(null, counts) || 1, w = 4, gap = 1, h = 20;
+  var bars = counts.map(function (c, i) {
+    var bh = c ? Math.max(2, Math.round(c / max * h)) : 1;
+    return '<rect x="' + i * (w + gap) + '" y="' + (h - bh) + '" width="' + w + '" height="' + bh + '" rx="1" fill="' + (c ? "var(--accent)" : "var(--line)") + '" opacity="' + (c ? 0.85 : 1) + '"/>';
+  }).join("");
+  return '<svg class="spark" width="' + n * (w + gap) + '" height="' + h + '" aria-label="Recommenders per year, ' + first + "–" + lastY + '"><title>Recommenders per year ' + first + "–" + lastY + "</title>" + bars + "</svg>";
+}
+
+function item(x, i) {
+  var r = x.r, s = x.s, parts = r.n.split("/");
+  var gem = (r.s || 0) < 1000 && s.recommenders >= 3;
+  var meta = [];
+  if (r.l) meta.push('<span><span class="dot" style="background:' + (LANG_COLORS[r.l] || "#999") + '"></span>' + esc(r.l) + "</span>");
+  if (r.s !== undefined) meta.push("<span>★ " + fmt(r.s) + "</span>");
+  meta.push("<span>" + s.mentions + " mention" + (s.mentions === 1 ? "" : "s") + "</span>");
+  meta.push("<span>first on HN " + year(r.m[0][0]) + "</span>");
+  if (gem) meta.push('<span class="badge gem">💎 hidden gem</span>');
+  if (r.a) meta.push('<span class="badge arch">archived</span>');
+  (r.t || []).slice(0, 3).forEach(function (t) { meta.push('<span class="badge">' + esc(t) + "</span>"); });
+  if (r.x.length) meta.push('<button class="more" data-i="' + i + '">' + (r.x.length === 1 ? "Why? 1 HN comment" : "Why? " + r.x.length + " HN comments") + " ▾</button>");
+  return '<li class="repo" data-i="' + i + '"><div class="rank">' + (i + 1) + "</div>" +
+    '<div class="main"><a class="name" href="https://github.com/' + esc(r.n) + '" target="_blank" rel="noopener"><span class="owner">' + esc(parts[0]) + " / </span>" + esc(parts[1]) + "</a>" +
+    (r.d ? '<div class="desc">' + esc(r.d) + "</div>" : '<div class="desc"></div>') + '<div class="meta">' + meta.join("") + "</div></div>" +
+    '<div class="side"><div class="recs">' + s.recommenders + "<small>recommender" + (s.recommenders === 1 ? "" : "s") + "</small></div>" + spark(r) + "</div></li>";
+}
+
+function contexts(r) {
+  return '<div class="ctx">' + r.x.map(function (c) {
+    var who = c.p !== undefined
+      ? '<a href="https://news.ycombinator.com/user?id=' + encodeURIComponent(c.a) + '">' + esc(c.a) + "</a> submitted it · " + c.p + ' points · <a href="https://news.ycombinator.com/item?id=' + c.i + '">' + ymd(c.t) + "</a>"
+      : '<a href="https://news.ycombinator.com/user?id=' + encodeURIComponent(c.a) + '">' + esc(c.a) + '</a> · <a href="https://news.ycombinator.com/item?id=' + c.i + '">' + ymd(c.t) + '</a> · on <a href="https://news.ycombinator.com/item?id=' + c.k + '">' + esc(c.s || "a thread") + "</a>";
+    return '<div class="quote"><div class="who">' + who + "</div>" + (c.p !== undefined ? "<p>" + esc(c.s) + "</p>" : "<p>" + esc(c.q) + "</p>") + "</div>";
+  }).join("") + "</div>";
+}
+
+function render() {
+  view = compute(); shown = 0; sel = -1;
+  $("list").innerHTML = "";
+  $("count").textContent = view.length.toLocaleString("en-US") + " repo" + (view.length === 1 ? "" : "s");
+  if (!view.length) { $("list").innerHTML = '<li class="empty">No repos match. Try a wider time window or clear the search.</li>'; $("loadmore").hidden = true; return; }
+  more();
+}
+function more() {
+  var html = "";
+  for (var i = shown; i < Math.min(view.length, shown + PAGE); i++) html += item(view[i], i);
+  $("list").insertAdjacentHTML("beforeend", html);
+  shown = Math.min(view.length, shown + PAGE);
+  $("loadmore").hidden = shown >= view.length;
+}
+function toggleCtx(i) {
+  var li = $("list").querySelector('li.repo[data-i="' + i + '"]');
+  if (!li) return;
+  var open = li.querySelector(".ctx");
+  if (open) open.remove(); else li.insertAdjacentHTML("beforeend", contexts(view[i].r));
+}
+function select(i) {
+  var lis = $("list").querySelectorAll("li.repo");
+  if (!lis.length) return;
+  if (i >= shown && shown < view.length) more();
+  sel = Math.max(0, Math.min(i, view.length - 1, $("list").querySelectorAll("li.repo").length - 1));
+  $("list").querySelectorAll("li.repo.sel").forEach(function (el) { el.classList.remove("sel"); });
+  var li = $("list").querySelector('li.repo[data-i="' + sel + '"]');
+  if (li) { li.classList.add("sel"); li.scrollIntoView({ block: "nearest" }); }
+}
+
+function update(patch) { Object.assign(state, patch); writeHash(); syncControls(); render(); }
+
+function init(data) {
+  DATA = data;
+  var st = data.stats, from = new Date(data.from * 1000).getUTCFullYear(), to = ymd(Math.floor(data.to / 86400));
+  $("stats").innerHTML = "<span><b>" + st.listed.toLocaleString("en-US") + "</b> repos recommended</span>" +
+    "<span><b>" + st.comments.toLocaleString("en-US") + "</b> HN comments + <b>" + st.stories.toLocaleString("en-US") + "</b> stories scanned</span>" +
+    "<span>" + from + " → " + to + "</span>";
+  var langs = {};
+  data.repos.forEach(function (r) { if (r.l) langs[r.l] = (langs[r.l] || 0) + 1; });
+  Object.keys(langs).sort(function (a, b) { return langs[b] - langs[a]; }).slice(0, 60).forEach(function (l) {
+    var o = document.createElement("option"); o.value = l; o.textContent = l + " (" + langs[l].toLocaleString("en-US") + ")"; $("lang").appendChild(o);
+  });
+  readHash(); syncControls(); render();
+}
+
+var timer;
+$("q").addEventListener("input", function (e) { clearTimeout(timer); timer = setTimeout(function () { update({ q: e.target.value }); }, 120); });
+$("lang").addEventListener("change", function (e) { update({ lang: e.target.value }); });
+$("sort").addEventListener("change", function (e) { update({ sort: e.target.value }); });
+$("gems").addEventListener("change", function (e) { update({ gems: e.target.checked }); });
+$("arch").addEventListener("change", function (e) { update({ arch: e.target.checked }); });
+$("win").addEventListener("click", function (e) { if (e.target.dataset && e.target.dataset.w) update({ w: e.target.dataset.w }); });
+$("loadmore").addEventListener("click", more);
+$("list").addEventListener("click", function (e) {
+  var b = e.target.closest(".more");
+  if (b) { toggleCtx(Number(b.dataset.i)); return; }
+});
+window.addEventListener("hashchange", function () { readHash(); syncControls(); render(); });
+window.addEventListener("scroll", function () {
+  if (shown < view.length && window.innerHeight + window.scrollY > document.body.offsetHeight - 600) more();
+});
+document.addEventListener("keydown", function (e) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  var typing = /input|select|textarea/i.test(e.target.tagName);
+  if (e.key === "/" && !typing) { e.preventDefault(); $("q").focus(); return; }
+  if (e.key === "Escape" && typing) { e.target.blur(); return; }
+  if (typing) return;
+  if (e.key === "j") select(sel + 1);
+  else if (e.key === "k") select(sel - 1);
+  else if (e.key === "Enter" && sel >= 0) toggleCtx(sel);
+  else if (e.key === "o" && sel >= 0) window.open("https://github.com/" + view[sel].r.n, "_blank", "noopener");
+  else if (e.key === "g") update({ gems: !state.gems });
+});
+
+fetch("data/repos.json").then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(init).catch(function (err) {
+  $("list").innerHTML = '<li class="empty">Could not load data/repos.json (' + esc(err.message) + "). Serve this folder over HTTP, e.g. <code>npx serve docs</code>.</li>";
+});
+</script>
+</body>
+</html>
