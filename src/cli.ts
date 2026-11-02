@@ -26,7 +26,7 @@ Usage
   hackerrepos build [options]        rebuild the dataset from HN Algolia + GitHub
 
 Options for top
-  -w, --window <w>     30d, 90d, 1y, 2y, all (default: all)
+  -w, --window <w>     only mentions in the last 30d, 12w, 6m, 1y, 5y... (default: all)
   -l, --lang <name>    only repos in this language (e.g. rust, go, python)
   -q, --search <text>  match name, description and topics
   -s, --sort <key>     score | trending | recommenders | stars | recent
