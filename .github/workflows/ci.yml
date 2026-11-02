@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Smoke-test the packed CLI
+        run: |
+          npm pack
+          dir=$(mktemp -d)
+          npm install --prefix "$dir" ./hackerrepos-*.tgz
+          bin="$dir/node_modules/.bin/hackerrepos"
+          "$bin" --help
+          "$bin" -n 5
+          "$bin" stats
+          "$bin" --json -n 3 | node -e 'const r=JSON.parse(require("fs").readFileSync(0,"utf8")); if (r.length!==3) process.exit(1)'
