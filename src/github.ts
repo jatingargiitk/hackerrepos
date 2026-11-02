@@ -102,6 +102,10 @@ export interface EnrichOptions {
   onProgress?: (done: number, total: number, remaining?: number) => void;
   /** Called after each batch so long runs can checkpoint the cache. */
   onBatch?: (cache: MetaCache) => Promise<void> | void;
+  /** Stop (without failing) once fewer than this many rate-limit points remain (default 50). */
+  reserve?: number;
+  /** Called if the run stopped early to stay inside the rate limit. */
+  onStop?: (fetched: number, wanted: number) => void;
 }
 
 /** Valid GitHub names only; anything else would break the GraphQL query. */
@@ -113,17 +117,23 @@ export async function enrich(keys: string[], opts: EnrichOptions): Promise<MetaC
   const fetchImpl = opts.fetchImpl ?? fetch;
   const maxAge = (opts.maxAgeDays ?? 7) * 86400_000;
   const now = Date.now();
-  const todo = keys.filter((k) => {
-    if (!isQueryable(k)) return false;
+  const age = (k: string) => {
     const hit = opts.cache[k];
-    return !hit || now - Date.parse(hit.fetched) > maxAge;
-  });
+    return hit ? now - Date.parse(hit.fetched) : Infinity;
+  };
+  // Never-seen repos first, then the stalest, so a run cut short by the
+  // rate limit still makes the most useful progress.
+  const todo = keys
+    .filter((k) => isQueryable(k) && age(k) > maxAge)
+    .sort((a, b) => age(b) - age(a));
+  const reserve = opts.reserve ?? 50;
+  let stopped = false;
   const batches: string[][] = [];
   for (let i = 0; i < todo.length; i += BATCH) batches.push(todo.slice(i, i + BATCH));
   let done = 0;
   let next = 0;
   const worker = async () => {
-    while (next < batches.length) {
+    while (!stopped && next < batches.length) {
       const batch = batches[next++]!;
       const { data, remaining } = await runBatch(batch, opts.token, fetchImpl);
       const fetched = new Date().toISOString();
@@ -133,12 +143,11 @@ export async function enrich(keys: string[], opts: EnrichOptions): Promise<MetaC
       done += batch.length;
       opts.onProgress?.(done, todo.length, remaining);
       await opts.onBatch?.(opts.cache);
-      if (remaining !== undefined && remaining < 50) {
-        throw new Error("GitHub GraphQL rate limit nearly exhausted; re-run later (the cache keeps progress).");
-      }
+      if (remaining !== undefined && remaining < reserve) stopped = true;
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, opts.concurrency ?? 2) }, worker));
+  if (stopped) opts.onStop?.(done, todo.length);
   return opts.cache;
 }
 

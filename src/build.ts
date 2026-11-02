@@ -175,6 +175,8 @@ export async function build(opts: BuildOptions): Promise<Dataset> {
       onBatch: async (c) => {
         if (++batches % 20 === 0) await saveCache(cacheFile, c);
       },
+      onStop: (done, wanted) =>
+        log(`  Stopped at ${done}/${wanted} to stay inside the GitHub rate limit; using cached metadata for the rest.`),
     });
     await saveCache(cacheFile, meta);
   }

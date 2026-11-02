@@ -68,4 +68,21 @@ describe("enrich", () => {
     expect(calls).toBe(1);
     expect(cache["a/b"]?.stars).toBe(99);
   });
+  it("stops cleanly near the rate limit, fetching new repos before stale ones", async () => {
+    const seen: string[] = [];
+    const impl = (async (_url: string | URL, init?: RequestInit) => {
+      const query = String(init?.body);
+      seen.push(query);
+      const names = [...query.matchAll(/owner: \\"([^\\]+)\\", name: \\"([^\\]+)\\"/g)].map((m) => `${m[1]}/${m[2]}`);
+      return new Response(JSON.stringify({ data: { rateLimit: { remaining: 10 }, ...Object.fromEntries(names.map((n, i) => [`r${i}`, gql(n)])) } }));
+    }) as typeof fetch;
+    const keys = Array.from({ length: 120 }, (_, i) => `o/r${i}`);
+    const cache: MetaCache = Object.fromEntries(keys.slice(0, 100).map((k) => [k, { name: k, fetched: "2020-01-01T00:00:00Z" }]));
+    let stop: [number, number] | undefined;
+    await enrich(keys, { token: "t", cache, fetchImpl: impl, concurrency: 1, onStop: (d, w) => (stop = [d, w]) });
+    expect(seen).toHaveLength(1);
+    expect(stop).toEqual([50, 120]);
+    for (const k of keys.slice(100)) expect(cache[k]?.fetched).not.toBe("2020-01-01T00:00:00Z");
+    expect(cache["o/r99"]?.fetched).toBe("2020-01-01T00:00:00Z");
+  });
 });
