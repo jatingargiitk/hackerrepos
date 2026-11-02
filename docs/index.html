@@ -357,7 +357,7 @@ function init(data) {
 }
 
 var timer;
-$("q").addEventListener("input", function (e) { clearTimeout(timer); timer = setTimeout(function () { update({ q: e.target.value }); }, 120); });
+$("q").addEventListener("input", function (e) { var v = e.target.value; clearTimeout(timer); timer = setTimeout(function () { update({ q: v }); }, 120); });
 $("lang").addEventListener("change", function (e) { update({ lang: e.target.value }); });
 $("sort").addEventListener("change", function (e) { update({ sort: e.target.value }); });
 $("gems").addEventListener("change", function (e) { update({ gems: e.target.checked }); });
