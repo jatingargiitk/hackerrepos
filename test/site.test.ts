@@ -1,14 +1,15 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { scoreRepo, type CompactMention, type ScoreOptions, type Score } from "../src/rank.ts";
+import { contextShard, scoreRepo, type CompactMention, type ScoreOptions, type Score } from "../src/rank.ts";
 
 const html = readFileSync(new URL("../docs/index.html", import.meta.url), "utf8");
 
-function siteScore(): (m: CompactMention[], o?: ScoreOptions) => Score {
-  const src = /\/\/ BEGIN scoreRepo\n([\s\S]*?)\/\/ END scoreRepo/.exec(html)?.[1];
-  if (!src) throw new Error("scoreRepo block not found in docs/index.html");
-  return new Function(`${src}; return scoreRepo;`)() as (m: CompactMention[], o?: ScoreOptions) => Score;
+function port<T>(name: string): T {
+  const src = new RegExp(`// BEGIN ${name}\\n([\\s\\S]*?)// END ${name}`).exec(html)?.[1];
+  if (!src) throw new Error(`${name} block not found in docs/index.html`);
+  return new Function(`${src}; return ${name};`)() as T;
 }
+const siteScore = () => port<(m: CompactMention[], o?: ScoreOptions) => Score>("scoreRepo");
 
 /** Small deterministic PRNG so the fuzz is reproducible. */
 function rng(seed: number) {
@@ -27,12 +28,19 @@ describe("docs/index.html", () => {
       expect(site(mentions, opts)).toEqual(scoreRepo(mentions, opts));
     }
   });
+  it("finds context shards exactly like src/rank.ts", () => {
+    const shard = port<(name: string, shards: number) => string>("contextShard");
+    for (const name of ["junegunn/fzf", "Fresh/Name", "a/b", "ÜBER/ünïcode", "x/" + "y".repeat(100)]) {
+      for (const n of [8, 16, 256]) expect(shard(name, n)).toBe(contextShard(name, n));
+    }
+  });
   it("is self-contained: no external scripts or stylesheets", () => {
     expect(html).not.toMatch(/<script[^>]+src=/i);
     expect(html).not.toMatch(/<link[^>]+stylesheet/i);
   });
   it("loads the dataset relative to the page (works on GitHub Pages)", () => {
     expect(html).toContain('fetch("data/repos.json")');
+    expect(html).toContain('fetch("data/ctx/" + id + ".json")');
   });
   it("credits HackerTube", () => {
     expect(html).toContain("https://karpathy.bearblog.dev/hacker-tube/");

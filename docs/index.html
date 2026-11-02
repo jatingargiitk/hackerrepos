@@ -267,14 +267,32 @@ function item(x, i) {
   if (gem) meta.push('<span class="badge gem">💎 hidden gem</span>');
   if (r.a) meta.push('<span class="badge arch">archived</span>');
   (r.t || []).slice(0, 3).forEach(function (t) { meta.push('<span class="badge">' + esc(t) + "</span>"); });
-  if (r.x.length) meta.push('<button class="more" data-i="' + i + '">' + (r.x.length === 1 ? "Why? 1 HN comment" : "Why? " + r.x.length + " HN comments") + " ▾</button>");
+  var nx = r.x ? r.x.length : (r.w || 0);
+  if (nx) meta.push('<button class="more" data-i="' + i + '">' + (nx === 1 ? "Why? 1 HN comment" : "Why? " + nx + " HN comments") + " ▾</button>");
   return '<li class="repo" data-i="' + i + '"><div class="rank">' + (i + 1) + "</div>" +
     '<div class="main"><a class="name" href="https://github.com/' + esc(r.n) + '" target="_blank" rel="noopener"><span class="owner">' + esc(parts[0]) + " / </span>" + esc(parts[1]) + "</a>" +
     (r.d ? '<div class="desc">' + esc(r.d) + "</div>" : '<div class="desc"></div>') + '<div class="meta">' + meta.join("") + "</div></div>" +
     '<div class="side"><div class="recs">' + s.recommenders + "<small>recommender" + (s.recommenders === 1 ? "" : "s") + "</small></div>" + spark(r) + "</div></li>";
 }
 
+// BEGIN contextShard
+function contextShard(name, shards) {
+  var h = 0x811c9dc5, s = name.toLowerCase();
+  for (var i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0;
+  var id = (h % shards).toString(16);
+  return id.length < 2 ? "0" + id : id;
+}
+// END contextShard
+var shardCache = {};
+function loadContexts(r) {
+  if (r.x) return Promise.resolve(r.x);
+  var id = contextShard(r.n, DATA.ctx || 256);
+  if (!shardCache[id]) shardCache[id] = fetch("data/ctx/" + id + ".json").then(function (res) { if (!res.ok) throw new Error(res.status); return res.json(); });
+  return shardCache[id].then(function (f) { r.x = f[r.n.toLowerCase()] || []; return r.x; }, function () { delete shardCache[id]; return []; });
+}
+
 function contexts(r) {
+  if (!r.x.length) return '<div class="ctx"><div class="quote"><p>Could not load the HN comments. Try again in a moment.</p></div></div>';
   return '<div class="ctx">' + r.x.map(function (c) {
     var who = c.p !== undefined
       ? '<a href="https://news.ycombinator.com/user?id=' + encodeURIComponent(c.a) + '">' + esc(c.a) + "</a> submitted it · " + c.p + ' points · <a href="https://news.ycombinator.com/item?id=' + c.i + '">' + ymd(c.t) + "</a>"
@@ -301,7 +319,16 @@ function toggleCtx(i) {
   var li = $("list").querySelector('li.repo[data-i="' + i + '"]');
   if (!li) return;
   var open = li.querySelector(".ctx");
-  if (open) open.remove(); else li.insertAdjacentHTML("beforeend", contexts(view[i].r));
+  if (open) { open.remove(); return; }
+  var r = view[i].r;
+  if (r.x) { li.insertAdjacentHTML("beforeend", contexts(r)); return; }
+  li.insertAdjacentHTML("beforeend", '<div class="ctx pending"><div class="quote"><p>Loading HN comments…</p></div></div>');
+  loadContexts(r).then(function () {
+    var pending = li.querySelector(".ctx.pending");
+    if (!pending) return; // closed while loading
+    pending.remove();
+    li.insertAdjacentHTML("beforeend", contexts(r));
+  });
 }
 function select(i) {
   var lis = $("list").querySelectorAll("li.repo");
