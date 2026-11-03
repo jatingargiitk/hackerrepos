@@ -15,6 +15,8 @@ Every `github.com` link in every HN comment and story since February 2007 (662k 
 
 ## Use it
 
+> The npm package isn't published yet, so `npx hackerrepos` won't resolve until it is. Until then, run it from a clone: `npm ci && npm run build && node dist/cli.js` (same flags).
+
 ```sh
 npx hackerrepos                       # top 25 of all time
 npx hackerrepos -w 1y                 # top of the last year (any 30d, 12w, 6m, 5y…)
