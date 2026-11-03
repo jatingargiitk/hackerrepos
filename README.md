@@ -1,6 +1,8 @@
 # hackerrepos
 
-**The GitHub repos Hacker News keeps recommending, ranked by how many *different* people linked them.** HackerTube, but for repos.
+**The GitHub repos Hacker News keeps recommending, ranked by how many *different* people linked them.** [HackerTube](https://karpathy.bearblog.dev/hacker-tube/), but for repos.
+
+**Browse it live: [jatingargiitk.github.io/hackerrepos](https://jatingargiitk.github.io/hackerrepos/)**
 
 ![hackerrepos demo](docs/demo.gif)
 
